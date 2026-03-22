@@ -3,12 +3,13 @@ import os
 from dotenv import load_dotenv
 
 # Cloud-Ready RAG Imports
-from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
+import langchain
 from langchain.retrievers import ParentDocumentRetriever
 from langchain_community.storage import LocalFileStore
 from langchain.storage import create_kv_docstore
+from langchain_groq import ChatGroq
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_core.output_parsers import StrOutputParser
