@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_classic.retrievers import ParentDocumentRetriever, ContextualCompressionRetriever
-from langchain_classic.storage import LocalFileStore, create_kv_docstore
+from langchain.retrievers import ParentDocumentRetriever
+from langchain_community.storage import LocalFileStore
+from langchain.storage import create_kv_docstore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_core.output_parsers import StrOutputParser
@@ -27,14 +28,14 @@ def init_rag_system():
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     
     # Vector Database & Parent Store
-    # Note: On the web, these will be rebuilt from your /data folder
+    # Note: from /data folder
     vector_db = Chroma(
         collection_name="ai_reg_gpt_prod",
         embedding_function=embeddings,
         persist_directory="./chroma_db"
     )
-    store = LocalFileStore("./parent_store")
-    docstore = create_kv_docstore(store)
+    fs = LocalFileStore("./parent_store")
+    docstore = create_kv_docstore(fs)
 
     # Hierarchical Splitting Strategy
     parent_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
@@ -46,6 +47,7 @@ def init_rag_system():
         docstore=docstore,
         child_splitter=child_splitter,
         parent_splitter=parent_splitter,
+        id_key="doc_id"
     )
     
     # 2026 Specialist-Auditor Models
