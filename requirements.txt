@@ -11,3 +11,4 @@ pypdf
 flashrank
 sentence-transformers
 pydantic>=2.0.0
+pysqlite3-binary
