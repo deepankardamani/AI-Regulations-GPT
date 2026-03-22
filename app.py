@@ -153,7 +153,7 @@ def run_compliance_audit(user_query):
          "OSFI E23.pdf": "Guideline E-23: Model Risk Management - Office of the Superintendent of Financial Institutions (OSFI) Canada",
          "mgf-for-agentic-ai-sgp.pdf": "Model AI Governance Framework for Generative AI - Personal Data Protection Commission (PDPC) Singapore",
          "ISOIEC420012023.pdf": "ISO/IEC 42001:2023 Information technology — Artificial intelligence — Management system"
-}
+
     }
 
     # Jurisdictional Intelligence Mapping
