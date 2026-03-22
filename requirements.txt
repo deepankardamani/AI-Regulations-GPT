@@ -1,10 +1,12 @@
 streamlit
+langchain
+langchain-community
 langchain-groq
 langchain-huggingface
 langchain-chroma
-langchain-classic
 langchain-experimental
 python-dotenv
 pypdf
 flashrank
 sentence-transformers
+pydantic>=2.0.0
