@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 
 # Cloud-Ready RAG Imports
 import langchain
-from langchain.retrievers import ParentDocumentRetriever
+try:
+    from langchain.retrievers import ParentDocumentRetriever
+except ImportError:
+    from langchain_community.retrievers import ParentDocumentRetriever
+
 from langchain_community.storage import LocalFileStore
 from langchain.storage import create_kv_docstore
 from langchain_groq import ChatGroq
