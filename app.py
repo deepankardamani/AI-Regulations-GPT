@@ -146,13 +146,14 @@ def run_compliance_audit(user_query):
     
     # Official Statutory Citations
     CITATIONS = {
-        "EU_AI_ACT.pdf": "EU AI Act (Regulation (EU) 2024/1689)",
-        "NIST_RAI.pdf": "NIST AI Risk Management Framework 1.0",
-        "SR11_7.pdf": "US Fed/OCC SR 11-7: Model Risk Management",
-        "a-pro-innovation-approach-to-ai-regulation-UK.pdf": "UK AI Regulation",
-        "OSFI E23.pdf": "Canada OSFI Guideline E-23",
-        "mgf-for-agentic-ai-sgp.pdf": "Singapore Agentic AI Framework",
-        "ISOIEC420012023.pdf": "ISO/IEC 42001:2023"
+        "EU_AI_ACT.pdf": "Regulation (EU) 2024/1689 of the European Parliament and of the Council (Artificial Intelligence Act)",
+        "NIST_RAI.pdf": "NIST AI 100-1: Artificial Intelligence Risk Management Framework (AI RMF 1.0) - U.S. Department of Commerce",
+        "SR11_7.pdf": "SR Letter 11-7: Guidance on Model Risk Management - Board of Governors of the Federal Reserve System",
+         "a-pro-innovation-approach-to-ai-regulation-UK.pdf": "A pro-innovation approach to AI regulation - UK Department for Science, Innovation and Technology",
+         "OSFI E23.pdf": "Guideline E-23: Model Risk Management - Office of the Superintendent of Financial Institutions (OSFI) Canada",
+         "mgf-for-agentic-ai-sgp.pdf": "Model AI Governance Framework for Generative AI - Personal Data Protection Commission (PDPC) Singapore",
+         "ISOIEC420012023.pdf": "ISO/IEC 42001:2023 Information technology — Artificial intelligence — Management system"
+}
     }
 
     # Jurisdictional Intelligence Mapping
