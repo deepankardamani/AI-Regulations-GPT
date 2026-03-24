@@ -66,7 +66,6 @@ def initialize_knowledge_base():
     h_retriever = ParentDocumentRetriever(vectorstore=vector_db, docstore=docstore, child_splitter=child_splitter, parent_splitter=parent_splitter, id_key="doc_id")
     reranker = FlashrankRerank(model="ms-marco-TinyBERT-L-2-v2")
     
-    # --- THE DUAL-LLM AUDIT TEAM ---
     drafter = ChatGroq(model="qwen/qwen3-32b", temperature=0.1)
     refiner = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
     
@@ -83,7 +82,7 @@ REGULATORY_MAP = {
 }
 
 if len(vector_db.get()['ids']) == 0:
-    with st.status("Initializing Knowledge Base...", expanded=True) as status:
+    with st.status("Indexing Knowledge Base...", expanded=True) as status:
         data_path = "./data"
         if os.path.exists(data_path):
             for filename in os.listdir(data_path):
@@ -96,17 +95,14 @@ if len(vector_db.get()['ids']) == 0:
                     retriever.add_documents(pages)
             status.update(label="System Ready", state="complete")
 
-# --- 5. AUDIT ENGINE (With Drafter-Refiner Loop) ---
+# --- 5. AUDIT ENGINE (With Parallel Disjoint Retrieval) ---
 def run_compliance_audit(user_query):
     query_norm = user_query.lower()
     
     jurisdiction_db = {
-        "uk": "UK", "united kingdom": "UK", "britain": "UK", "london": "UK",
-        "eu": "EU", "european union": "EU", "europe": "EU", "brussels": "EU",
-        "usa": "USA", "us": "USA", "america": "USA", "united states": "USA",
-        "canada": "Canada", "osfi": "Canada", "toronto": "Canada",
-        "singapore": "Singapore", "sgp": "Singapore", "mas": "Singapore",
-        "global": "Global", "iso": "Global", "international": "Global"
+        "uk": "UK", "united kingdom": "UK", "eu": "EU", "europe": "EU",
+        "usa": "USA", "us": "USA", "canada": "Canada", "osfi": "Canada",
+        "singapore": "Singapore", "sgp": "Singapore", "global": "Global"
     }
     
     CITATIONS = {
@@ -119,75 +115,92 @@ def run_compliance_audit(user_query):
         "ISOIEC420012023.pdf": "ISO/IEC 42001:2023"
     }
 
-    # Detect and Reset Jurisdictions
+    # 1. Detect New Locations
     matches = set([v for k, v in jurisdiction_db.items() if k in query_norm])
     if matches:
         st.session_state.last_location = list(matches)
     
     active_locs = st.session_state.last_location
     if not active_locs:
-        return "⚠️ Specify a jurisdiction (e.g., EU, USA, Singapore) to start.", [], CITATIONS
+        return "⚠️ Specify a jurisdiction (e.g., EU, USA, Singapore).", [], CITATIONS
 
-    # Retrieval + Reranking (Broadened to k=15)
-    parent_keys = list(docstore.yield_keys())
-    parent_docs = [docstore.mget([k])[0] for k in parent_keys]
-    lexical_search = BM25Retriever.from_documents(parent_docs)
-    lexical_search.k = 5
-    hybrid_engine = EnsembleRetriever(retrievers=[retriever, lexical_search], weights=[0.7, 0.3])
+    # 2. PARALLEL RETRIEVAL: Perform a dedicated search for EACH geography
+    all_raw_results = []
     
-    raw_results = hybrid_engine.invoke(user_query, search_kwargs={"filter": {"location": {"$in": active_locs}}, "k": 15})
-    refined_results = reranker.compress_documents(raw_results, user_query)
+    with st.spinner(f"Accessing separate vaults for: {', '.join(active_locs)}..."):
+        for loc in active_locs:
+            # Build a location-specific Lexical index
+            parent_keys = list(docstore.yield_keys())
+            loc_parents = [docstore.mget([k])[0] for k in parent_keys if docstore.mget([k])[0].metadata.get('location') == loc]
+            
+            if loc_parents:
+                loc_lexical = BM25Retriever.from_documents(loc_parents)
+                loc_lexical.k = 5
+                
+                # Create a temporary ensemble for ONLY this location
+                loc_engine = EnsembleRetriever(retrievers=[retriever, loc_lexical], weights=[0.7, 0.3])
+                
+                # Dedicated Search for this location ONLY
+                loc_results = loc_engine.invoke(
+                    user_query, 
+                    search_kwargs={"filter": {"location": loc}, "k": 8}
+                )
+                all_raw_results.extend(loc_results)
 
-    # --- THE DRAFTER-REFINER REASONING LOOP ---
-    context_payload = "\n\n".join([f"[{d.metadata['location']}]: {d.page_content}" for d in refined_results])
+    if not all_raw_results:
+        return "⚠️ No data found for the selected regions.", [], CITATIONS
+
+    # 3. RERANK THE AGGREGATED SET
+    refined_results = reranker.compress_documents(all_raw_results, user_query)
+
+    # 4. DRAFTER-REFINER WITH SOURCE ATTRIBUTION
+    context_payload = "\n\n".join([f"SOURCE [{d.metadata['location']}]: {d.page_content}" for d in refined_results])
     
-    # 1. THE DRAFTER (Technical Specialist)
     d_prompt = ChatPromptTemplate.from_template("""
     [ROLE: TECHNICAL SPECIALIST]
-    Your task is to extract raw requirements and specific differences from the following context for: {active_locs}.
+    Extract and group facts specifically by region. 
     Context: {context}
-    Question: {question}
-    Draft:""")
+    Query: {question}
+    Draft Response:""")
     
-    # 2. THE REFINER (Senior Regulatory Advisor)
     r_prompt = ChatPromptTemplate.from_template("""
     [ROLE: SENIOR REGULATORY ADVISOR]
-    STRICT INSTRUCTION: 
-    1. Use ONLY the provided context and the technical draft.
-    2. Focus ONLY on the requested regions: {active_locs}.
-    3. If the context is missing info for a region, state it explicitly. Do not invent details.
-    4. Provide clear, authoritative guidance in bullet points.
-    
-    Technical Draft: {draft}
-    Full Context: {context}
+    STRICT ATTRIBUTION RULE:
+    - Use data labeled [Singapore] ONLY for Singapore sections.
+    - Use data labeled [USA] ONLY for USA sections.
+    - If a document (like the UK) discusses another region (like Singapore), IGNORE it if the primary domestic document is available.
+    - Focus strictly on: {active_locs}.
+
+    Context: {context}
+    Draft: {draft}
     Final Advisory Report:""")
     
-    # Sequential Execution
-    with st.spinner("Synthesizing audit using Drafter-Refiner chain..."):
-        draft = (d_prompt | drafter_llm | StrOutputParser()).invoke({
-            "context": context_payload, 
-            "question": user_query,
-            "active_locs": ", ".join(active_locs)
-        })
-        
-        final_output = (r_prompt | refiner_llm | StrOutputParser()).invoke({
-            "context": context_payload, 
-            "draft": draft, 
-            "active_locs": ", ".join(active_locs)
-        })
+    draft = (d_prompt | drafter_llm | StrOutputParser()).invoke({
+        "context": context_payload, "question": user_query
+    })
+    final_output = (r_prompt | refiner_llm | StrOutputParser()).invoke({
+        "context": context_payload, "draft": draft, "active_locs": active_locs
+    })
     
     return final_output, refined_results, CITATIONS
 
-# --- 6. CHAT INTERFACE LAYER ---
+# --- 6. UI LAYER ---
 st.title("⚖️ AI Regulations GPT")
+st.caption("Institutional-Grade Regulatory Intelligence | Parallel Retrieval Architecture")
+
+col1, col2, col3 = st.columns(3)
+with col1: st.info("🔍 **Hybrid Search:** Per-Region Quotas")
+with col2: st.info("🌍 **Global Reach:** Isolated Jurisdictions")
+with col3: st.info("🛡️ **Audit Grade:** Source-Specific Attribution")
+
+st.divider()
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if "sources" in message:
             with st.expander("Verified Statutory Sources"):
-                for src in message["sources"]:
-                    st.write(f"📖 {src}")
+                for src in message["sources"]: st.write(f"📖 {src}")
 
 if prompt := st.chat_input("Ask about AI regulations..."):
     st.chat_message("user").markdown(prompt)
