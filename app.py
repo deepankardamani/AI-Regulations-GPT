@@ -41,8 +41,23 @@ except ImportError:
 # Reranker
 from langchain_community.document_compressors.flashrank_rerank import FlashrankRerank
 
+def get_api_key():
+    # 1. Try Streamlit native secrets (Best for Cloud)
+    if "GROQ_API_KEY" in st.secrets:
+        return st.secrets["GROQ_API_KEY"]
+    
+    # 2. Try environment variables (Best for local/Docker)
+    return os.environ.get("GROQ_API_KEY")
+
+GROQ_API_KEY = get_api_key()
+
+if not GROQ_API_KEY:
+    st.error("🔑 GROQ_API_KEY missing! Please check your Streamlit Secrets panel.")
+    st.stop()
+
 # --- 1. CONFIG & API ---
-load_dotenv()
+if os.path.exists(".env"):
+    load_dotenv()
 st.set_page_config(page_title="AI Regulations GPT", page_icon="⚖️", layout="wide")
 
 # Fetch API Key
