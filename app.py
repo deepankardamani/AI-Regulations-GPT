@@ -26,7 +26,7 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# --- RETRIEVERS (Now in langchain_classic for 2026) ---
+# --- RETRIEVERS (In langchain_classic for 2026) ---
 from langchain_classic.retrievers import ParentDocumentRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 
@@ -42,18 +42,16 @@ except ImportError:
 from langchain_community.document_compressors.flashrank_rerank import FlashrankRerank
 
 def get_api_key():
-    # 1. Try Environment Variables first (Most stable for Cloud)
+    # 1. Try Environment Variables first 
     key = os.environ.get("GROQ_API_KEY")
     if key:
         return key
     
-    # 2. Try Streamlit Secrets SAFELY
+    # 2. Try Streamlit Secrets 
     try:
-        # We use .get() and a try-block to prevent the 'SecretNotFoundError' crash
         if st.secrets and "GROQ_API_KEY" in st.secrets:
             return st.secrets["GROQ_API_KEY"]
     except Exception:
-        # If the secrets file is missing/broken, ignore it and continue
         pass
         
     return None
@@ -189,7 +187,7 @@ with st.sidebar:
         st.rerun()
 
 st.title("⚖️ AI Regulations GPT")
-# --- 7. HOMEPAGE ENHANCEMENT (Add after st.title) ---
+# --- 7. HOMEPAGE ENHANCEMENT  ---
 st.markdown("""
     **Institutional-Grade Regulatory Intelligence** *Advanced RAG Architecture for Risk, Compliance, and Audit Professionals.*
 """)
