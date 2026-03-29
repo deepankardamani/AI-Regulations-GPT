@@ -12,17 +12,33 @@ import re
 from dotenv import load_dotenv
 
 # --- GEN AI STACK ---
+# Standard Text Splitters
 from langchain_text_splitters import TextSplitter, RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
+
+# Vector Store & Embeddings
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+
+# Loaders & Models
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
+# --- RETRIEVERS (Now in langchain_classic for 2026) ---
+from langchain_classic.retrievers import ParentDocumentRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import ParentDocumentRetriever, EnsembleRetriever
-from langchain.storage import LocalFileStore, create_kv_docstore
+
+# --- UPDATED STORAGE & DOCSTORE ---
+from langchain_classic.storage import LocalFileStore
+try:
+    from langchain_classic.storage import create_kv_docstore
+except ImportError:
+    # Fallback for internal utility path
+    from langchain_classic.storage._lc_store import create_kv_docstore
+
+# Reranker
 from langchain_community.document_compressors.flashrank_rerank import FlashrankRerank
 
 # --- 1. CONFIG & API ---
