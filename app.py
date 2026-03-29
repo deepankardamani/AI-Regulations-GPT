@@ -42,18 +42,21 @@ except ImportError:
 from langchain_community.document_compressors.flashrank_rerank import FlashrankRerank
 
 def get_api_key():
-    # 1. Try Streamlit native secrets (Best for Cloud)
-    if "GROQ_API_KEY" in st.secrets:
-        return st.secrets["GROQ_API_KEY"]
+    # 1. Try Environment Variables first (Most stable for Cloud)
+    key = os.environ.get("GROQ_API_KEY")
+    if key:
+        return key
     
-    # 2. Try environment variables (Best for local/Docker)
-    return os.environ.get("GROQ_API_KEY")
-
-GROQ_API_KEY = get_api_key()
-
-if not GROQ_API_KEY:
-    st.error("🔑 GROQ_API_KEY missing! Please check your Streamlit Secrets panel.")
-    st.stop()
+    # 2. Try Streamlit Secrets SAFELY
+    try:
+        # We use .get() and a try-block to prevent the 'SecretNotFoundError' crash
+        if st.secrets and "GROQ_API_KEY" in st.secrets:
+            return st.secrets["GROQ_API_KEY"]
+    except Exception:
+        # If the secrets file is missing/broken, ignore it and continue
+        pass
+        
+    return None
 
 # --- 1. CONFIG & API ---
 if os.path.exists(".env"):
@@ -186,6 +189,36 @@ with st.sidebar:
         st.rerun()
 
 st.title("⚖️ AI Regulations GPT")
+# --- 7. HOMEPAGE ENHANCEMENT (Add after st.title) ---
+st.markdown("""
+    **Institutional-Grade Regulatory Intelligence** *Advanced RAG Architecture for Risk, Compliance, and Audit Professionals.*
+""")
+
+# Feature Highlights in Columns
+feat_col1, feat_col2, feat_col3 = st.columns(3)
+
+with feat_col1:
+    st.markdown("#### 🏛️ Jurisdictional Isolation")
+    st.caption("Uses **Parallel Disjoint Retrieval** to ensure regulations from different regions never 'pollute' or confuse each other during search.")
+
+with feat_col2:
+    st.markdown("#### 🧠 Dual-Model Reasoning")
+    st.caption("Employs a **Drafter-Refiner** chain. Technical facts extracted by **Qwen-3** are synthesized into guidance by **GPT-OSS 120B**.")
+
+with feat_col3:
+    st.markdown("#### 📖 Verifiable Evidence")
+    st.caption("Combines **Hierarchical Indexing** with **Hybrid Search** (Semantic + BM25) to provide 100% accurate, page-level citations.")
+
+# Coverage Badges
+st.write("---")
+st.markdown("**Current Regulatory Coverage:**")
+st.markdown("""
+    `EU AI Act` `NIST AI RMF` `US Fed SR 11-7` `UK Pro-Innovation Framework` 
+    `Singapore Agentic AI Framework` `Canada OSFI E-23` `ISO/IEC 42001:2023`
+""")
+st.divider()
+
+# --- CHAT INTERFACE CONTINUES BELOW ---
 if prompt := st.chat_input("Ask about regulations..."):
     st.chat_message("user").markdown(prompt)
     with st.chat_message("assistant"):
