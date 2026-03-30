@@ -6,6 +6,9 @@ langchain-experimental
 langchain-chroma
 langchain-huggingface
 langchain-groq
+sentence-transformers
+transformers
+torch
 flashrank
 pypdf
 python-dotenv
