@@ -6,6 +6,7 @@ langchain-experimental
 langchain-chroma
 langchain-huggingface
 langchain-groq
+langchain-classic
 sentence-transformers
 transformers
 torch
@@ -13,3 +14,4 @@ flashrank
 pypdf
 python-dotenv
 pysqlite3-binary
+rank_bm25
